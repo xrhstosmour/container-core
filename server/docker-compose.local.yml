@@ -1,0 +1,172 @@
+version: "3.9"
+
+services:
+  base:
+    container_name: "base"
+    build:
+      context: ..
+      dockerfile: "server/base.dockerfile"
+      args:
+        - "DOCKER_USER_NAME=${DOCKER_USER_NAME}"
+        - "DOCKER_USER_UID=${DOCKER_USER_UID}"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    env_file:
+      - ".env"
+    volumes:
+      - "base_certificates_data:/base/.certificates"
+      - "base_keys_data:/base/.keys"
+      - "base_shared_data:/base/shared"
+
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "80:80"
+      - "443:443"
+      # - "8080:8080"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web_secure.address=:443"
+      # Global redirection to https without middleware.
+      # - "--entrypoints.web.http.redirections.entryPoint.to=web_secure"
+      # - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "base_certificates_data:/etc/certs:ro"
+    labels:
+      # Default traefik configuration.
+      - "traefik.enable=true"
+      - "traefik.docker.network=public"
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_HOST?Variable not set}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # SSL/TLS configuration.
+      - "traefik.http.routers.traefik.entrypoints=web_secure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.domains[0].main=localhost"
+      - "traefik.http.routers.traefik.tls.domains[0].sans=*.localhost"
+      # Global redirection to https with middleware.
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+  portainer:
+    # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too. 
+    image: "portainer/portainer-ce:latest"
+    container_name: "portainer"
+    command: "-H unix:///var/run/docker.sock"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "9000:9000"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    env_file:
+      - ".env"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOST?Variable not set}`)"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.entrypoints=web_secure"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+  file_browser:
+    image: "filebrowser/filebrowser:latest"
+    container_name: "file_browser"
+    # user: ${DOCKER_USER_UID}:${DOCKER_USER_UID} Should create a host user and assign the PUID to docker's PGID.
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "8888:80"
+    volumes:
+      - "./configuration/file_browser/database.db:/database.db"
+      - "./configuration/file_browser/settings.json:/settings.json"
+      - "base_shared_data:/srv"
+    security_opt:
+      - "no-new-privileges:true"
+    env_file:
+      - ".env"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.file_browser.rule=Host(`${FILE_BROWSER_HOST?Variable not set}`)"
+      - "traefik.http.routers.file_browser.tls=true"
+      - "traefik.http.routers.file_browser.entrypoints=web_secure"
+      - "traefik.http.services.file_browser.loadbalancer.server.port=80"
+
+  postgresql:
+    image: "postgres:latest"
+    container_name: "postgresql"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "5432:5432"
+    volumes:
+      - "postgresql_data:/var/lib/postgresql/data"
+    env_file:
+      - ".env"
+    labels:
+      - "traefik.enable=false"
+
+  pgadmin:
+    image: "dpage/pgadmin4:latest"
+    container_name: "pgadmin"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "5050:5050"
+    depends_on:
+      - "postgresql"
+    volumes:
+      - "pgadmin_data:/var/lib/pgadmin"
+    env_file:
+      - ".env"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_HOST?Variable not set}`)"
+      - "traefik.http.routers.pgadmin.tls=true"
+      - "traefik.http.routers.pgadmin.entrypoints=web_secure"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=5050"
+
+volumes:
+  base_certificates_data:
+    name: "base_certificates_data"
+  base_keys_data:
+    name: "base_keys_data"
+  base_shared_data:
+    name: "base_shared_data"
+  pgadmin_data:
+    name: "pgadmin_data"
+  postgresql_data:
+    name: "postgresql_data"
+  portainer_data:
+    name: "portainer_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false
