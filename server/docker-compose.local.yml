@@ -30,7 +30,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      # - "8080:8080"
+      - "8080:8080"
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -80,34 +80,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOST?Variable not set}`)"
+      - "traefik.http.routers.portainer.service=portainer"
       - "traefik.http.routers.portainer.tls=true"
       - "traefik.http.routers.portainer.entrypoints=web_secure"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-
-  file_browser:
-    image: "filebrowser/filebrowser:latest"
-    container_name: "file_browser"
-    # user: ${DOCKER_USER_UID}:${DOCKER_USER_UID} Should create a host user and assign the PUID to docker's PGID.
-    restart: "unless-stopped"
-    networks:
-      - "public"
-      - "local"
-    ports:
-      - "8888:80"
-    volumes:
-      - "./configuration/file_browser/database.db:/database.db"
-      - "./configuration/file_browser/settings.json:/settings.json"
-      - "base_shared_data:/srv"
-    security_opt:
-      - "no-new-privileges:true"
-    env_file:
-      - ".env"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.file_browser.rule=Host(`${FILE_BROWSER_HOST?Variable not set}`)"
-      - "traefik.http.routers.file_browser.tls=true"
-      - "traefik.http.routers.file_browser.entrypoints=web_secure"
-      - "traefik.http.services.file_browser.loadbalancer.server.port=80"
 
   postgresql:
     image: "postgres:latest"
@@ -142,9 +118,63 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_HOST?Variable not set}`)"
+      - "traefik.http.routers.pgadmin.service=pgadmin"
       - "traefik.http.routers.pgadmin.tls=true"
       - "traefik.http.routers.pgadmin.entrypoints=web_secure"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=5050"
+
+  # Help: https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples
+  vaultwarden:
+    image: "vaultwarden/server:latest"
+    container_name: "vaultwarden"
+    restart: "unless-stopped"
+    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID}
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${VAULTWARDEN_PORT?Variable not set}:80"
+      - "${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}:3012"
+    volumes:
+      - "vaultwarden_data:/data"
+    environment:
+      - "ROCKET_PORT=${VAULTWARDEN_PORT?Variable not set}"
+      - "WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`)"
+      - "traefik.http.routers.vaultwarden.service=vaultwarden"
+      - "traefik.http.routers.vaultwarden.tls=true"
+      - "traefik.http.routers.vaultwarden.entrypoints=web_secure"
+      - "traefik.http.services.vaultwarden.loadbalancer.server.port=${VAULTWARDEN_PORT?Variable not set}"
+      - "traefik.http.routers.vaultwarden-websocket.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`) && Path(`/notifications/hub`)"
+      - "traefik.http.routers.vaultwarden-websocket.service=vaultwarden-websocket"
+      - "traefik.http.services.vaultwarden-websocket.loadbalancer.server.port=${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}"
+
+  file_browser:
+    image: "filebrowser/filebrowser:latest"
+    container_name: "file_browser"
+    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID}
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${FILE_BROWSER_PORT?Variable not set}:80"
+    volumes:
+      - "./configuration/file_browser/database.db:/database.db"
+      # - "./configuration/file_browser/settings.json:/filebrowser.json"
+      - "base_shared_data:/srv"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.file_browser.rule=Host(`${FILE_BROWSER_HOST?Variable not set}`)"
+      - "traefik.http.routers.file_browser.service=file_browser"
+      - "traefik.http.routers.file_browser.tls=true"
+      - "traefik.http.routers.file_browser.entrypoints=web_secure"
+      # For some reason the container can only be exposed at port 80 both on the host, container and proxy.
+      - "traefik.http.services.file_browser.loadbalancer.server.port=80"
 
 volumes:
   base_certificates_data:
@@ -159,6 +189,8 @@ volumes:
     name: "postgresql_data"
   portainer_data:
     name: "portainer_data"
+  vaultwarden_data:
+    name: "vaultwarden_data"
 
 networks:
   public:
