@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  windows:
+    container_name: "windows"
+    build:
+      context: ..
+      dockerfile: "operating_systems/operating_systems.dockerfile"
+    restart: "unless-stopped"
+    # networks:
+    #   - "local"
