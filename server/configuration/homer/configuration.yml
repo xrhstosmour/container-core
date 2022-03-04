@@ -1,0 +1,126 @@
+# Homepage configuration.
+header: true
+footer: false
+connectivityCheck: false
+proxy:
+  useCredentials: true
+
+title: "${HOMER_TITLE?Variable not set}"
+subtitle: "${HOMER_SUBTITLE?Variable not set}"
+logo: "assets/logos/me.svg"
+
+# Theme customization.
+stylesheet:
+  - "assets/custom.css"
+
+columns: 3
+theme: default
+colors:
+  light:
+    highlight-primary: "#fff5f2"
+    highlight-secondary: "#fff5f2"
+    highlight-hover: "#bebebe"
+    background: "#12152B"
+    card-background: "#fff5f2"
+    text: "#ffffff"
+    text-header: "#fafafa"
+    text-title: "#000000"
+    text-subtitle: "#111111"
+    card-shadow: rgba(0, 0, 0, 0.5)
+    link: "#3273dc"
+    link-hover: "#2e4053"
+    background-image: "../assets/wallpapers/purple_wallpaper_light.jpeg"
+  dark:
+    highlight-primary: "#181C3A"
+    highlight-secondary: "#181C3A"
+    highlight-hover: "#1F2347"
+    background: "#12152B"
+    card-background: "#181C3A"
+    text: "#eaeaea"
+    text-header: "#7C71DD"
+    text-title: "#fafafa"
+    text-subtitle: "#8B8D9C"
+    card-shadow: rgba(0, 0, 0, 0.5)
+    link: "#c1c1c1"
+    link-hover: "#fafafa"
+    background-image: "../assets/wallpapers/purple_wallpaper.jpeg"
+
+# Optional navbar.
+links:
+  - name: "Site"
+    icon: "fas-light fa-browser"
+    url: "https://xrhstosmour.eu/"
+  - name: "GitHub"
+    icon: "fab fa-github"
+    url: "https://github.com/xrhstosmour"
+  - name: "Resume"
+    icon: "fas fa-file-alt"
+    url: "https://drive.google.com/file/d/1QJHL3z1TsLke2G-E2ZVb_-CvfY5DXf_u/view?usp=sharing"
+
+# Services.
+# First level array represent a group.
+# Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+services:
+  - name: "Applications"
+    icon: "fas fa-cloud"
+    items:
+      - name: "Vaultwarden"
+        logo: "assets/logos/vaultwarden.svg"
+        subtitle: "Password manager"
+        tagstyle: "is-primary"
+        tag: "application"
+        url: "https://vault.localhost/"
+      - name: "Joplin"
+        logo: "assets/logos/joplin.svg"
+        subtitle: "Note taking application"
+        tagstyle: "is-primary"
+        tag: "application"
+        url: "https://notes.localhost/"
+      - name: "Code Server"
+        logo: "assets/logos/code_server.svg"
+        subtitle: "VS Code in the browser"
+        tagstyle: "is-primary"
+        tag: "application"
+        url: "https://code.localhost/"
+
+  - name: "Management tools"
+    icon: "fa-solid fa-screwdriver-wrench"
+    items:
+      - name: "Portainer"
+        logo: "assets/logos/portainer.png"
+        subtitle: "Container management tool"
+        tagstyle: "is-info"
+        tag: "management"
+        url: "https://portainer.localhost"
+      - name: "Traefik"
+        logo: "assets/logos/traefik.svg"
+        subtitle: "Cloud native application proxy"
+        tagstyle: "is-info"
+        tag: "management"
+        url: "https://proxy.localhost"
+      - name: "PGAdmin"
+        logo: "assets/logos/pgadmin.png"
+        subtitle: "Administration PostgreSQL tool"
+        tagstyle: "is-info"
+        tag: "management"
+        url: "https://pgadmin.localhost"
+
+  - name: "Media & Storage"
+    icon: "fa-light fa-files"
+    items:
+      - name: "File Browser"
+        logo: "assets/logos/filebrowser.svg"
+        subtitle: "Web file browser"
+        tagstyle: "is-link"
+        tag: "storage"
+        url: "https://files.localhost/"
+
+  - name: "Monitoring tools"
+    icon: "fa-solid fa-screwdriver-wrench"
+    items:
+      - name: "Uptime Kuma"
+        logo: "assets/logos/uptime_kuma.svg"
+        subtitle: "A fancy monitoring tool"
+        tagstyle: "is-info"
+        tag: "monitoring"
+        url: "https://health.localhost"
