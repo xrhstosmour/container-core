@@ -181,6 +181,138 @@ services:
       # The container can only be exposed at port 80 both via the proxy.
       - "traefik.http.services.file_browser.loadbalancer.server.port=80"
 
+  homer:
+    image: "b4bz/homer:latest"
+    container_name: "homer"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${HOMER_PORT?Variable not set}:8080"
+    environment:
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+      - "UID=${DOCKER_USER_UID?Variable not set}"
+      - "GID=${DOCKER_USER_UID?Variable not set}"
+      - "HOMER_TITLE=${HOMER_TITLE?Variable not set}"
+      - "HOMER_SUBTITLE=${HOMER_SUBTITLE?Variable not set}"
+    volumes:
+      - "homer_data:/www/assets"
+      - "./configuration/homer/configuration.yml:/www/assets/config.yml"
+      - "./configuration/homer/assets/fonts:/www/assets/fonts"
+      - "./configuration/homer/assets/logos:/www/assets/logos"
+      - "./configuration/homer/assets/wallpapers:/www/assets/wallpapers"
+      - "./configuration/homer/assets/custom.css:/www/assets/custom.css"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homer.rule=Host(`${HOMER_HOST?Variable not set}`)"
+      - "traefik.http.routers.homer.service=homer"
+      - "traefik.http.routers.homer.tls=true"
+      - "traefik.http.routers.homer.entrypoints=web_secure"
+      # The container can only be exposed at port 8080 locally and both via the proxy.
+      - "traefik.http.services.homer.loadbalancer.server.port=8080"
+
+  joplin:
+    image: "joplin/server:latest"
+    container_name: "joplin"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "22300:22300"
+    depends_on:
+      - "postgresql"
+    environment:
+      - "APP_PORT=22300"
+      - "APP_BASE_URL=https://${JOPLIN_HOST?Variable not set}"
+      - "DB_CLIENT=pg"
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}"
+      - "POSTGRES_DATABASE=${POSTGRES_DATABASE?Variable not set}"
+      - "POSTGRES_USER=${POSTGRES_USER?Variable not set}"
+      - "POSTGRES_PORT=${POSTGRES_PORT?Variable not set}"
+      - "POSTGRES_HOST=${POSTGRES_SERVER?Variable not set}"
+      - "MAX_TIME_DRIFT=${JOPLIN_MAX_TIME_DRIFT?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.joplin.rule=Host(`${JOPLIN_HOST?Variable not set}`)"
+      - "traefik.http.routers.joplin.service=joplin"
+      - "traefik.http.routers.joplin.tls=true"
+      - "traefik.http.routers.joplin.entrypoints=web_secure"
+      # The container can only be exposed at port 22300 both locally and via the proxy.
+      - "traefik.http.services.joplin.loadbalancer.server.port=22300"
+
+  vikunja_api:
+    image: "vikunja/api:latest"
+    container_name: "vikunja_api"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    depends_on:
+      - "postgresql"
+    environment:
+      VIKUNJA_DATABASE_HOST: "${POSTGRES_SERVER?Variable not set}"
+      VIKUNJA_DATABASE_PASSWORD: "${POSTGRES_PASSWORD?Variable not set}"
+      VIKUNJA_DATABASE_TYPE: "${POSTGRES_DIALECT?Variable not set}"
+      VIKUNJA_DATABASE_USER: "${POSTGRES_USER?Variable not set}"
+      VIKUNJA_DATABASE_DATABASE: "${POSTGRES_DATABASE?Variable not set}"
+    volumes:
+      - "vikunja_api_data:/app/vikunja/files"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vikunja_api.rule=Host(`${VIKUNJA_HOST?Variable not set}`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)"
+      - "traefik.http.routers.vikunja_api.service=vikunja_api"
+      - "traefik.http.routers.vikunja_api.tls=true"
+      - "traefik.http.routers.vikunja_api.entrypoints=web_secure"
+
+  uptime_kuma:
+    image: "louislam/uptime-kuma:latest"
+    container_name: "uptime_kuma"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${UPTIME_KUMA_PORT?Variable not set}:3001"
+    volumes:
+      - "uptime_kuma_data:/app/data"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime_kuma.rule=Host(`${UPTIME_KUMA_HOST?Variable not set}`)"
+      - "traefik.http.routers.uptime_kuma.service=uptime_kuma"
+      - "traefik.http.routers.uptime_kuma.tls=true"
+      - "traefik.http.routers.uptime_kuma.entrypoints=web_secure"
+      - "traefik.http.services.uptime_kuma.loadbalancer.server.port=3001"
+
+  code_server:
+    image: "codercom/code-server:latest"
+    container_name: "code_server"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${CODE_SERVER_PORT?Variable not set}:8080"
+    environment:
+      - "PUID=${DOCKER_USER_UID?Variable not set}"
+      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+    # volumes:
+    #   - "$HOME/.config:/home/coder/.config"
+    #   - "$PWD:/home/coder/project"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.code_server.rule=Host(`${CODE_SERVER_HOST?Variable not set}`)"
+      - "traefik.http.routers.code_server.service=code_server"
+      - "traefik.http.routers.code_server.tls=true"
+      - "traefik.http.routers.code_server.entrypoints=web_secure"
+      - "traefik.http.services.code_server.loadbalancer.server.port=8080"
+
 volumes:
   base_certificates_data:
     name: "base_certificates_data"
@@ -196,6 +328,12 @@ volumes:
     name: "portainer_data"
   vaultwarden_data:
     name: "vaultwarden_data"
+  homer_data:
+    name: "homer_data"
+  uptime_kuma_data:
+    name: "uptime_kuma_data"
+  vikunja_api_data:
+    name: "vikunja_api_data"
 
 networks:
   public:
