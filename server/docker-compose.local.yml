@@ -7,8 +7,8 @@ services:
       context: ..
       dockerfile: "server/base.dockerfile"
       args:
-        - "DOCKER_USER_NAME=${DOCKER_USER_NAME}"
-        - "DOCKER_USER_UID=${DOCKER_USER_UID}"
+        - "DOCKER_USER_NAME=${DOCKER_USER_NAME?Variable not set}"
+        - "DOCKER_USER_UID=${DOCKER_USER_UID?Variable not set}"
     restart: "unless-stopped"
     networks:
       - "public"
@@ -95,6 +95,11 @@ services:
       - "5432:5432"
     volumes:
       - "postgresql_data:/var/lib/postgresql/data"
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DATABASE?Variable not set}
+    # ! Add also port and the rest needed condfiguration before removing the .env.
     env_file:
       - ".env"
     labels:
@@ -128,7 +133,7 @@ services:
     image: "vaultwarden/server:latest"
     container_name: "vaultwarden"
     restart: "unless-stopped"
-    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID}
+    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID?Variable not set}
     networks:
       - "public"
       - "local"
@@ -154,7 +159,7 @@ services:
   file_browser:
     image: "filebrowser/filebrowser:latest"
     container_name: "file_browser"
-    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID}
+    user: ${DOCKER_USER_UID?Variable not set}:${DOCKER_USER_UID?Variable not set}
     restart: "unless-stopped"
     networks:
       - "public"
@@ -173,7 +178,7 @@ services:
       - "traefik.http.routers.file_browser.service=file_browser"
       - "traefik.http.routers.file_browser.tls=true"
       - "traefik.http.routers.file_browser.entrypoints=web_secure"
-      # For some reason the container can only be exposed at port 80 both on the host, container and proxy.
+      # The container can only be exposed at port 80 both via the proxy.
       - "traefik.http.services.file_browser.loadbalancer.server.port=80"
 
 volumes:
