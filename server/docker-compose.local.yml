@@ -89,19 +89,21 @@ services:
     image: "postgres:latest"
     container_name: "postgresql"
     restart: "unless-stopped"
+    user: "${POSTGRESQL_USER?Variable not set}"
     networks:
       - "local"
     ports:
-      - "5432:5432"
+      - "${POSTGRESQL_PORT?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
+    expose:
+      - "${POSTGRESQL_PORT?Variable not set}"
     volumes:
       - "postgresql_data:/var/lib/postgresql/data"
+      - "./scripts/postgresql:/docker-entrypoint-initdb.d"
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
-      - POSTGRES_DB=${POSTGRES_DATABASE?Variable not set}
-    # ! Add also port and the rest needed condfiguration before removing the .env.
-    env_file:
-      - ".env"
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}
+      - POSTGRES_USER=${POSTGRESQL_USER?Variable not set}
+      - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_DATABASES?Variable not set}
+    command: "-p ${POSTGRESQL_PORT?Variable not set}"
     labels:
       - "traefik.enable=false"
 
@@ -113,20 +115,22 @@ services:
       - "public"
       - "local"
     ports:
-      - "5050:5050"
+      - "${PGADMIN_PORT?Variable not set}:${PGADMIN_PORT?Variable not set}"
     depends_on:
       - "postgresql"
     volumes:
       - "pgadmin_data:/var/lib/pgadmin"
-    env_file:
-      - ".env"
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL?Variable not set}"
+      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD?Variable not set}"
+      - "PGADMIN_LISTEN_PORT=${PGADMIN_PORT?Variable not set}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_HOST?Variable not set}`)"
       - "traefik.http.routers.pgadmin.service=pgadmin"
       - "traefik.http.routers.pgadmin.tls=true"
       - "traefik.http.routers.pgadmin.entrypoints=web_secure"
-      - "traefik.http.services.pgadmin.loadbalancer.server.port=5050"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=${PGADMIN_PORT?Variable not set}"
 
   # Help: https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples
   vaultwarden:
@@ -226,12 +230,12 @@ services:
     environment:
       - "APP_PORT=22300"
       - "APP_BASE_URL=https://${JOPLIN_HOST?Variable not set}"
-      - "DB_CLIENT=pg"
-      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}"
-      - "POSTGRES_DATABASE=${POSTGRES_DATABASE?Variable not set}"
-      - "POSTGRES_USER=${POSTGRES_USER?Variable not set}"
-      - "POSTGRES_PORT=${POSTGRES_PORT?Variable not set}"
-      - "POSTGRES_HOST=${POSTGRES_SERVER?Variable not set}"
+      - "DB_CLIENT=${JOPLIN_DATABASE_TYPE?Variable not set}"
+      - "POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}"
+      - "POSTGRES_DATABASE=${JOPLIN_DATABASE?Variable not set}"
+      - "POSTGRES_USER=${POSTGRESQL_USER?Variable not set}"
+      - "POSTGRES_PORT=${POSTGRESQL_PORT?Variable not set}"
+      - "POSTGRES_HOST=${POSTGRESQL_SERVER?Variable not set}"
       - "MAX_TIME_DRIFT=${JOPLIN_MAX_TIME_DRIFT?Variable not set}"
     labels:
       - "traefik.enable=true"
@@ -249,22 +253,27 @@ services:
     networks:
       - "public"
       - "local"
+    ports:
+      - "${VIKUNJA_API_PORT?Variable not set}:${VIKUNJA_API_PORT?Variable not set}"
     depends_on:
       - "postgresql"
     environment:
-      VIKUNJA_DATABASE_HOST: "${POSTGRES_SERVER?Variable not set}"
-      VIKUNJA_DATABASE_PASSWORD: "${POSTGRES_PASSWORD?Variable not set}"
-      VIKUNJA_DATABASE_TYPE: "${POSTGRES_DIALECT?Variable not set}"
-      VIKUNJA_DATABASE_USER: "${POSTGRES_USER?Variable not set}"
-      VIKUNJA_DATABASE_DATABASE: "${POSTGRES_DATABASE?Variable not set}"
+      VIKUNJA_DATABASE_HOST: "${POSTGRESQL_SERVER?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
+      VIKUNJA_DATABASE_PASSWORD: "${POSTGRESQL_PASSWORD?Variable not set}"
+      VIKUNJA_DATABASE_TYPE: "${VIKUNJA_DATABASE_TYPE?Variable not set}"
+      VIKUNJA_DATABASE_USER: "${POSTGRESQL_USER?Variable not set}"
+      VIKUNJA_DATABASE_DATABASE: "${VIKUNJA_DATABASE?Variable not set}"
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "${VIKUNJA_API_ENABLE_REGISTRATION?Variable not set}"
+      VIKUNJA_SERVICE_TIMEZONE: "${DOCKER_TIMEZONE?Variable not set}"
     volumes:
       - "vikunja_api_data:/app/vikunja/files"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.vikunja_api.rule=Host(`${VIKUNJA_HOST?Variable not set}`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)"
+      - "traefik.http.routers.vikunja_api.rule=Host(`${VIKUNJA_API_HOST?Variable not set}`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)"
       - "traefik.http.routers.vikunja_api.service=vikunja_api"
       - "traefik.http.routers.vikunja_api.tls=true"
       - "traefik.http.routers.vikunja_api.entrypoints=web_secure"
+      - "traefik.http.services.vikunja_api.loadbalancer.server.port=${VIKUNJA_API_PORT?Variable not set}"
 
   uptime_kuma:
     image: "louislam/uptime-kuma:latest"
