@@ -83,7 +83,7 @@ services:
         tag: "application"
         url: "https://code.localhost/"
 
-  - name: "Management tools"
+  - name: "Management Tools"
     icon: "fa-solid fa-screwdriver-wrench"
     items:
       - name: "Portainer"
