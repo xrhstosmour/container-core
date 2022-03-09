@@ -18,7 +18,8 @@ services:
     volumes:
       - "base_certificates_data:/base/.certificates"
       - "base_keys_data:/base/.keys"
-      - "base_shared_data:/base/shared"
+      - "base_shared_scripts:/base/scripts"
+      - "base_shared_data:/base/data"
 
   traefik:
     image: "traefik:latest"
@@ -71,7 +72,7 @@ services:
       - "public"
       - "local"
     ports:
-      - "9000:9000"
+      - "${PORTAINER_PORT?Variable not set}:9000"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "portainer_data:/data"
@@ -83,6 +84,7 @@ services:
       - "traefik.http.routers.portainer.service=portainer"
       - "traefik.http.routers.portainer.tls=true"
       - "traefik.http.routers.portainer.entrypoints=web_secure"
+      # The container can only be exposed at port 9000 locally.
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
   postgresql:
@@ -98,11 +100,13 @@ services:
       - "${POSTGRESQL_PORT?Variable not set}"
     volumes:
       - "postgresql_data:/var/lib/postgresql/data"
-      - "./scripts/postgresql:/docker-entrypoint-initdb.d"
+      - "./scripts/databases:/docker-entrypoint-initdb.d"
     environment:
-      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}
-      - POSTGRES_USER=${POSTGRESQL_USER?Variable not set}
-      - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_DATABASES?Variable not set}
+      - "POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}"
+      - "POSTGRES_USER=${POSTGRESQL_USER?Variable not set}"
+      # POSTGRES_MULTIPLE_DATABASES_INFO should have the following format: database1:user1:password1,database2:user2:password2,...
+      - "POSTGRES_MULTIPLE_DATABASES_INFO=${POSTGRES_MULTIPLE_DATABASES_INFO?Variable not set}"
+      - "POSTGRES_INITDB_ARGS=${POSTGRES_INITIALIZE_ARGUMENTS?Variable not set}"
     command: "-p ${POSTGRESQL_PORT?Variable not set}"
     labels:
       - "traefik.enable=false"
@@ -137,7 +141,7 @@ services:
     image: "vaultwarden/server:latest"
     container_name: "vaultwarden"
     restart: "unless-stopped"
-    user: ${DOCKER_USER_UID}:${DOCKER_USER_UID?Variable not set}
+    # user: ${DOCKER_USER_UID?Variable not set}:${DOCKER_USER_UID?Variable not set}
     networks:
       - "public"
       - "local"
@@ -149,6 +153,7 @@ services:
     environment:
       - "ROCKET_PORT=${VAULTWARDEN_PORT?Variable not set}"
       - "WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED?Variable not set}"
+      - "DATABASE_URL=${VAULTWARDEN_DATABASE_PASSWORD?Variable not set}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`)"
@@ -182,7 +187,7 @@ services:
       - "traefik.http.routers.file_browser.service=file_browser"
       - "traefik.http.routers.file_browser.tls=true"
       - "traefik.http.routers.file_browser.entrypoints=web_secure"
-      # The container can only be exposed at port 80 both via the proxy.
+      # The container can only be exposed at port 80 locally.
       - "traefik.http.services.file_browser.loadbalancer.server.port=80"
 
   homer:
@@ -213,7 +218,7 @@ services:
       - "traefik.http.routers.homer.service=homer"
       - "traefik.http.routers.homer.tls=true"
       - "traefik.http.routers.homer.entrypoints=web_secure"
-      # The container can only be exposed at port 8080 locally and both via the proxy.
+      # The container can only be exposed at port 8080 locally.
       - "traefik.http.services.homer.loadbalancer.server.port=8080"
 
   joplin:
@@ -227,23 +232,29 @@ services:
       - "22300:22300"
     depends_on:
       - "postgresql"
+    # command: bash -c "./wait_for_it.sh postgresql:${POSTGRESQL_PORT?Variable not set} --strict --timeout=300"
     environment:
       - "APP_PORT=22300"
       - "APP_BASE_URL=https://${JOPLIN_HOST?Variable not set}"
       - "DB_CLIENT=${JOPLIN_DATABASE_TYPE?Variable not set}"
-      - "POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}"
+      - "POSTGRES_PASSWORD=${JOPLIN_DATABASE_PASSWORD?Variable not set}"
       - "POSTGRES_DATABASE=${JOPLIN_DATABASE?Variable not set}"
-      - "POSTGRES_USER=${POSTGRESQL_USER?Variable not set}"
+      - "POSTGRES_USER=${JOPLIN_DATABASE_USER?Variable not set}"
       - "POSTGRES_PORT=${POSTGRESQL_PORT?Variable not set}"
       - "POSTGRES_HOST=${POSTGRESQL_SERVER?Variable not set}"
       - "MAX_TIME_DRIFT=${JOPLIN_MAX_TIME_DRIFT?Variable not set}"
+    # Bind the wait_for_it script, at the joplin's working directory (/home/joplin/packages/server).
+    volumes:
+      - type: "bind"
+        source: "./scripts/services/wait_for_it.sh"
+        target: "/home/joplin/packages/server/wait_for_it.sh"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.joplin.rule=Host(`${JOPLIN_HOST?Variable not set}`)"
       - "traefik.http.routers.joplin.service=joplin"
       - "traefik.http.routers.joplin.tls=true"
       - "traefik.http.routers.joplin.entrypoints=web_secure"
-      # The container can only be exposed at port 22300 both locally and via the proxy.
+      # The container can only be exposed at port 22300 both locally, on host and via the proxy.
       - "traefik.http.services.joplin.loadbalancer.server.port=22300"
 
   vikunja_api:
@@ -258,13 +269,16 @@ services:
     depends_on:
       - "postgresql"
     environment:
-      VIKUNJA_DATABASE_HOST: "${POSTGRESQL_SERVER?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
-      VIKUNJA_DATABASE_PASSWORD: "${POSTGRESQL_PASSWORD?Variable not set}"
-      VIKUNJA_DATABASE_TYPE: "${VIKUNJA_DATABASE_TYPE?Variable not set}"
-      VIKUNJA_DATABASE_USER: "${POSTGRESQL_USER?Variable not set}"
-      VIKUNJA_DATABASE_DATABASE: "${VIKUNJA_DATABASE?Variable not set}"
-      VIKUNJA_SERVICE_ENABLEREGISTRATION: "${VIKUNJA_API_ENABLE_REGISTRATION?Variable not set}"
-      VIKUNJA_SERVICE_TIMEZONE: "${DOCKER_TIMEZONE?Variable not set}"
+      - "VIKUNJA_DATABASE_TYPE=${VIKUNJA_DATABASE_TYPE?Variable not set}"
+      - "VIKUNJA_DATABASE_HOST=${POSTGRESQL_SERVER?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
+      - "VIKUNJA_DATABASE_PASSWORD=${VIKUNJA_DATABASE_PASSWORD?Variable not set}"
+      - "VIKUNJA_DATABASE_USER=${VIKUNJA_DATABASE_USER?Variable not set}"
+      - "VIKUNJA_DATABASE_DATABASE=${VIKUNJA_DATABASE?Variable not set}"
+      - "VIKUNJA_SERVICE_ENABLEREGISTRATION=${VIKUNJA_API_ENABLE_REGISTRATION?Variable not set}"
+      - "VIKUNJA_SERVICE_TIMEZONE=${DOCKER_TIMEZONE?Variable not set}"
+      - "PUID=${DOCKER_USER_UID?Variable not set}"
+      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      - "VIKUNJA_FIRST_CHILD=${VIKUNJA_FIRST_CHILD?Variable not set}"
     volumes:
       - "vikunja_api_data:/app/vikunja/files"
     labels:
@@ -329,6 +343,8 @@ volumes:
     name: "base_keys_data"
   base_shared_data:
     name: "base_shared_data"
+  base_shared_scripts:
+    name: "base_shared_scripts"
   pgadmin_data:
     name: "pgadmin_data"
   postgresql_data:
