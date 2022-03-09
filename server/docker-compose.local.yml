@@ -153,7 +153,7 @@ services:
     environment:
       - "ROCKET_PORT=${VAULTWARDEN_PORT?Variable not set}"
       - "WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED?Variable not set}"
-      - "DATABASE_URL=${VAULTWARDEN_DATABASE_PASSWORD?Variable not set}"
+      - "DATABASE_URL=${VAULTWARDEN_DATABASE_URL?Variable not set}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`)"
@@ -271,7 +271,8 @@ services:
     environment:
       - "VIKUNJA_DATABASE_TYPE=${VIKUNJA_DATABASE_TYPE?Variable not set}"
       - "VIKUNJA_DATABASE_HOST=${POSTGRESQL_SERVER?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
-      - "VIKUNJA_DATABASE_PASSWORD=${VIKUNJA_DATABASE_PASSWORD?Variable not set}"
+      # Escape special charactes in passwords using the following tool: https://www.urlencoder.org/.
+      - "VIKUNJA_DATABASE_PASSWORD=${VIKUNJA_DATABASE_ESCAPED_PASSWORD?Variable not set}"
       - "VIKUNJA_DATABASE_USER=${VIKUNJA_DATABASE_USER?Variable not set}"
       - "VIKUNJA_DATABASE_DATABASE=${VIKUNJA_DATABASE?Variable not set}"
       - "VIKUNJA_SERVICE_ENABLEREGISTRATION=${VIKUNJA_API_ENABLE_REGISTRATION?Variable not set}"
