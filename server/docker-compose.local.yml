@@ -271,8 +271,9 @@ services:
     environment:
       - "VIKUNJA_DATABASE_TYPE=${VIKUNJA_DATABASE_TYPE?Variable not set}"
       - "VIKUNJA_DATABASE_HOST=${POSTGRESQL_SERVER?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
-      # Escape special charactes in passwords using the following tool: https://www.urlencoder.org/.
-      - "VIKUNJA_DATABASE_PASSWORD=${VIKUNJA_DATABASE_ESCAPED_PASSWORD?Variable not set}"
+      # The Vikunja's API escape the characters # and ! but not the @ and $, because of url.PathEscape function. Even if you try to escape them manually there is a problem.
+      # So avoid using all the above special characters at the password field, more details can be found here: https://github.com/go-vikunja/api/issues/22.
+      - "VIKUNJA_DATABASE_PASSWORD=${VIKUNJA_DATABASE_PASSWORD?Variable not set}"
       - "VIKUNJA_DATABASE_USER=${VIKUNJA_DATABASE_USER?Variable not set}"
       - "VIKUNJA_DATABASE_DATABASE=${VIKUNJA_DATABASE?Variable not set}"
       - "VIKUNJA_SERVICE_ENABLEREGISTRATION=${VIKUNJA_API_ENABLE_REGISTRATION?Variable not set}"
