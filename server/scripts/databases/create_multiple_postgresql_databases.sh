@@ -11,9 +11,9 @@ function create_databases_and_users() {
 	IFS=":" read -r database user password <<<"$databases_info"
 	echo "Creating database '$database' with user '$user' and password '$password' ..."
 	psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
-		    CREATE USER $user WITH ENCRYPTED PASSWORD '$password';
-		    CREATE DATABASE $database;
-		    GRANT ALL PRIVILEGES ON DATABASE $database TO $user;
+		CREATE ROLE $user WITH LOGIN PASSWORD '$password';
+			    CREATE DATABASE $database;
+			    GRANT ALL PRIVILEGES ON DATABASE $database TO $user;
 	EOSQL
 }
 
