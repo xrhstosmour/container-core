@@ -5,7 +5,7 @@ connectivityCheck: false
 proxy:
   useCredentials: true
 
-title: "${HOMER_TITLE?Variable not set}"
+title: ${HOMER_TITLE?Variable not set}
 subtitle: "${HOMER_SUBTITLE?Variable not set}"
 logo: "assets/logos/me.svg"
 
@@ -57,6 +57,24 @@ links:
     icon: "fas fa-file-alt"
     url: "https://drive.google.com/file/d/1QJHL3z1TsLke2G-E2ZVb_-CvfY5DXf_u/view?usp=sharing"
 
+# Some pre-defined tag styles, referenced using <<: *{TAG_NAME}.
+tags:
+  Applications: &Applications
+    - tag: "applications"
+      tagstyle: "is-medium is-primary"
+  Management: &Management
+    - tag: "management"
+      tagstyle: "is-medium is-link"
+  MediaStorage: &MediaStorage
+    - tag: "files"
+      tagstyle: "is-medium is-info"
+  Monitoring: &Monitoring
+    - tag: "monitoring"
+      tagstyle: "is-medium is-success"
+  Security: &Security
+    - tag: "security"
+      tagstyle: "is-medium is-danger"
+
 # Services.
 # First level array represent a group.
 # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
@@ -64,63 +82,59 @@ services:
   - name: "Applications"
     icon: "fas fa-cloud"
     items:
-      - name: "Vaultwarden"
-        logo: "assets/logos/vaultwarden.svg"
-        subtitle: "Password manager"
-        tagstyle: "is-primary"
-        tag: "application"
-        url: "https://vault.localhost/"
       - name: "Joplin"
         logo: "assets/logos/joplin.svg"
         subtitle: "Note taking application"
-        tagstyle: "is-primary"
-        tag: "application"
+        <<: *Applications
         url: "https://notes.localhost/"
       - name: "Code Server"
         logo: "assets/logos/code_server.svg"
         subtitle: "VS Code in the browser"
-        tagstyle: "is-primary"
-        tag: "application"
+        <<: *Applications
         url: "https://code.localhost/"
 
-  - name: "Management Tools"
+  - name: "Management"
     icon: "fa-solid fa-screwdriver-wrench"
     items:
       - name: "Portainer"
         logo: "assets/logos/portainer.png"
         subtitle: "Container management tool"
-        tagstyle: "is-info"
-        tag: "management"
+        <<: *Management
         url: "https://portainer.localhost"
       - name: "Traefik"
         logo: "assets/logos/traefik.svg"
         subtitle: "Cloud native application proxy"
-        tagstyle: "is-info"
-        tag: "management"
+        <<: *Management
         url: "https://proxy.localhost"
       - name: "PGAdmin"
         logo: "assets/logos/pgadmin.png"
-        subtitle: "Administration PostgreSQL tool"
-        tagstyle: "is-info"
-        tag: "management"
+        subtitle: "PostgreSQL management tool"
+        <<: *Management
         url: "https://pgadmin.localhost"
 
-  - name: "Media & Storage"
+  - name: "Files"
     icon: "fa-light fa-files"
     items:
       - name: "File Browser"
         logo: "assets/logos/filebrowser.svg"
         subtitle: "Web file browser"
-        tagstyle: "is-link"
-        tag: "storage"
+        <<: *MediaStorage
         url: "https://files.localhost/"
 
-  - name: "Monitoring tools"
+  - name: "Monitoring"
     icon: "fa-solid fa-screwdriver-wrench"
     items:
       - name: "Uptime Kuma"
         logo: "assets/logos/uptime_kuma.svg"
         subtitle: "A fancy monitoring tool"
-        tagstyle: "is-info"
-        tag: "monitoring"
+        <<: *Monitoring
         url: "https://health.localhost"
+
+  - name: "Security"
+    icon: "fa-solid fa-screwdriver-wrench"
+    items:
+      - name: "Vaultwarden"
+        logo: "assets/logos/vaultwarden.svg"
+        subtitle: "Password manager"
+        <<: *Security
+        url: "https://vault.localhost/"
