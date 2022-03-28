@@ -1,3 +1,4 @@
+# TODO: Use Secrets to store the passwords to all containers.
 version: "3.9"
 
 services:
@@ -16,10 +17,11 @@ services:
     env_file:
       - ".env"
     volumes:
-      - "base_certificates_data:/base/.certificates"
-      - "base_keys_data:/base/.keys"
-      - "base_shared_scripts:/base/scripts"
-      - "base_shared_data:/base/data"
+      - "base_certificates:/base/.certificates"
+      - "base_keys:/base/.keys"
+      - "base_databases:/base/.databases"
+      - "base_scripts:/base/scripts"
+      - "base_data:/base/data"
 
   traefik:
     image: "traefik:latest"
@@ -44,7 +46,7 @@ services:
       # - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "base_certificates_data:/etc/certs:ro"
+      - "base_certificates:/etc/certs:ro"
     labels:
       # Default traefik configuration.
       - "traefik.enable=true"
@@ -76,8 +78,8 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "portainer_data:/data"
-    env_file:
-      - ".env"
+    security_opt:
+      - "no-new-privileges:true"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOST?Variable not set}`)"
@@ -87,9 +89,39 @@ services:
       # The container can only be exposed at port 9000 locally.
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
+  # authelia:
+  #   image: "authelia/authelia:latest"
+  #   container_name: "authelia"
+  #   restart: "unless-stopped"
+  #   networks:
+  #     - "public"
+  #   ports:
+  #     - "${AUTHELIA_PORT?Variable not set}:${AUTHELIA_PORT?Variable not set}"
+  #   expose:
+  #     - "${AUTHELIA_PORT?Variable not set}"
+  #   healthcheck:
+  #     disable: true
+  #   volumes:
+  #     - "authelia_data:/config"
+  #   environment:
+  #     - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.authelia.rule=Host(`${AUTHELIA_HOST?Variable not set}`)"
+  #     - "traefik.http.routers.authelia.service=authelia"
+  #     - "traefik.http.routers.authelia.tls=true"
+  #     - "traefik.http.routers.authelia.entrypoints=web_secure"
+  #     - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:${AUTHELIA_PORT?Variable not set}/api/verify?rd=https://${AUTHELIA_HOST?Variable not set}/"
+  #     - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+  #     - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email"
+  #     - "traefik.http.middlewares.authelia_basic.forwardauth.address=http://authelia:${AUTHELIA_PORT?Variable not set}/api/verify?auth=basic"
+  #     - "traefik.http.middlewares.authelia_basic.forwardauth.trustForwardHeader=true"
+  #     - "traefik.http.middlewares.authelia_basic.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email"
+
   postgresql:
     image: "postgres:latest"
     container_name: "postgresql"
+    hostname: "postgresql"
     restart: "unless-stopped"
     user: "${POSTGRESQL_USER?Variable not set}"
     networks:
@@ -136,6 +168,66 @@ services:
       - "traefik.http.routers.pgadmin.entrypoints=web_secure"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=${PGADMIN_PORT?Variable not set}"
 
+  redis:
+    image: "redis:latest"
+    container_name: "redis"
+    hostname: "redis"
+    # The command save 100 1 is for saving up to 100 data before restarting.
+    command: "redis-server --save 100 1 --loglevel warning --requirepass ${REDIS_PASSWORD?Variable not set} --port ${REDIS_PORT?Variable not set}"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "${REDIS_PORT?Variable not set}:${REDIS_PORT?Variable not set}"
+    expose:
+      - "${REDIS_PORT?Variable not set}"
+    volumes:
+      - redis_data:/data
+    labels:
+      - "traefik.enable=false"
+
+  redis_commander:
+    image: "rediscommander/redis-commander:latest"
+    container_name: "redis_commander"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${REDIS_COMMANDER_PORT?Variable not set}:${REDIS_COMMANDER_PORT?Variable not set}"
+    depends_on:
+      - "postgresql"
+    environment:
+      - "REDIS_HOST=redis"
+      - "REDIS_HOSTS=local:redis:${REDIS_PORT?Variable not set}"
+      - "REDIS_PORT=${REDIS_PORT?Variable not set}"
+      - "REDIS_PASSWORD=${REDIS_PASSWORD?Variable not set}"
+      - "HTTP_USER=${REDIS_COMMANDER_USER?Variable not set}"
+      - "HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis_commander.rule=Host(`${REDIS_COMMANDER_HOST?Variable not set}`)"
+      - "traefik.http.routers.redis_commander.service=redis_commander"
+      - "traefik.http.routers.redis_commander.tls=true"
+      - "traefik.http.routers.redis_commander.entrypoints=web_secure"
+      - "traefik.http.services.redis_commander.loadbalancer.server.port=8081"
+
+  # TODO: Fix RabbitMQ docker compose and find an appropriate GUI too.
+  rabbit_mq:
+    image: "rabbitmq:latest"
+    container_name: "rabbit_mq"
+    hostname: "rabbit_mq"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "5672:5672"
+    volumes:
+      - "rabbit_mq_data:/var/lib/rabbitmq"
+      # - "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
+    labels:
+      - "traefik.enable=false"
+
   # Help: https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples
   vaultwarden:
     image: "vaultwarden/server:latest"
@@ -176,9 +268,9 @@ services:
     ports:
       - "${FILE_BROWSER_PORT?Variable not set}:80"
     volumes:
+      - "base_data:/data"
       - "./configuration/file_browser/database.db:/database.db"
-      # - "./configuration/file_browser/settings.json:/filebrowser.json"
-      - "base_shared_data:/srv"
+      - "./configuration/file_browser/settings.json:/filebrowser.json"
     security_opt:
       - "no-new-privileges:true"
     labels:
@@ -220,6 +312,7 @@ services:
       - "traefik.http.routers.homer.entrypoints=web_secure"
       # The container can only be exposed at port 8080 locally.
       - "traefik.http.services.homer.loadbalancer.server.port=8080"
+      # - "traefik.http.routers.homer.middlewares=authelia@docker"
 
   joplin:
     image: "joplin/server:latest"
@@ -337,20 +430,39 @@ services:
       - "traefik.http.routers.code_server.tls=true"
       - "traefik.http.routers.code_server.entrypoints=web_secure"
       - "traefik.http.services.code_server.loadbalancer.server.port=8080"
+  # samba:
+  #   image: "dperson/samba:latest"
+  #   container_name: "samba"
+  #   restart: "unless-stopped"
+  #   networks:
+  #     - "public"
+  #     - "local"
+  #   ports:
+  #     - "${CODE_SERVER_PORT?Variable not set}:8080"
+  #   environment:
+  #     - "PUID=${DOCKER_USER_UID?Variable not set}"
+  #     - "PGID=${DOCKER_USER_UID?Variable not set}"
+  #     - "TZ=${DOCKER_TIMEZONE?Variable not set}"
 
 volumes:
-  base_certificates_data:
-    name: "base_certificates_data"
-  base_keys_data:
-    name: "base_keys_data"
-  base_shared_data:
-    name: "base_shared_data"
-  base_shared_scripts:
-    name: "base_shared_scripts"
+  base_certificates:
+    name: "base_certificates"
+  base_keys:
+    name: "base_keys"
+  base_data:
+    name: "base_data"
+  base_scripts:
+    name: "base_scripts"
+  base_databases:
+    name: "base_databases"
   pgadmin_data:
     name: "pgadmin_data"
   postgresql_data:
     name: "postgresql_data"
+  redis_data:
+    name: "redis_data"
+  rabbit_mq_data:
+    name: "rabbit_mq_data"
   portainer_data:
     name: "portainer_data"
   vaultwarden_data:
@@ -361,6 +473,8 @@ volumes:
     name: "uptime_kuma_data"
   vikunja_api_data:
     name: "vikunja_api_data"
+  # authelia_data:
+  #   name: "authelia_data"
 
 networks:
   public:
