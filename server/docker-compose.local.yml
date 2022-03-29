@@ -167,6 +167,7 @@ services:
       - "traefik.http.routers.pgadmin.entrypoints=web_secure"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=${PGADMIN_PORT?Variable not set}"
 
+  # TODO: Implement SSL encryption for theRedis connection. Help here: https://stackoverflow.com/questions/60253058/how-to-set-up-a-docker-redis-container-with-ssl.
   redis:
     image: "redis:latest"
     container_name: "redis"
