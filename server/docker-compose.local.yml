@@ -121,7 +121,6 @@ services:
   postgresql:
     image: "postgres:latest"
     container_name: "postgresql"
-    hostname: "postgresql"
     restart: "unless-stopped"
     user: "${POSTGRESQL_USER?Variable not set}"
     networks:
@@ -171,7 +170,6 @@ services:
   redis:
     image: "redis:latest"
     container_name: "redis"
-    hostname: "redis"
     # The command save 100 1 is for saving up to 100 data before restarting.
     command: "redis-server --save 100 1 --loglevel warning --requirepass ${REDIS_PASSWORD?Variable not set} --port ${REDIS_PORT?Variable not set}"
     restart: "unless-stopped"
@@ -213,18 +211,17 @@ services:
       - "traefik.http.services.redis_commander.loadbalancer.server.port=8081"
 
   # TODO: Fix RabbitMQ docker compose and find an appropriate GUI too.
-  rabbit_mq:
+  rabbitmq:
     image: "rabbitmq:latest"
-    container_name: "rabbit_mq"
-    hostname: "rabbit_mq"
+    container_name: "rabbitmq"
     restart: "unless-stopped"
     networks:
       - "local"
     ports:
       - "5672:5672"
     volumes:
-      - "rabbit_mq_data:/var/lib/rabbitmq"
-      # - "./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
+      - "rabbitmq_data:/var/lib/rabbitmq"
+      - "./configuration/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
     labels:
       - "traefik.enable=false"
 
@@ -461,8 +458,8 @@ volumes:
     name: "postgresql_data"
   redis_data:
     name: "redis_data"
-  rabbit_mq_data:
-    name: "rabbit_mq_data"
+  rabbitmq_data:
+    name: "rabbitmq_data"
   portainer_data:
     name: "portainer_data"
   vaultwarden_data:
