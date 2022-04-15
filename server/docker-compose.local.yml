@@ -66,7 +66,7 @@ services:
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       # Add basic authentication to the dashboard.
       - "traefik.http.routers.traefik.middlewares=basic-auth"
-      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
+      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_ENCODED_PASSWORD?Variable not set}"
 
   portainer:
     # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too.
@@ -199,7 +199,7 @@ services:
     ports:
       - "${REDIS_COMMANDER_PORT?Variable not set}:${REDIS_COMMANDER_PORT?Variable not set}"
     depends_on:
-      - "postgresql"
+      - "redis"
     environment:
       - "REDIS_HOST=redis"
       - "REDIS_HOSTS=local:redis:${REDIS_PORT?Variable not set}"
