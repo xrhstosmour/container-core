@@ -35,7 +35,8 @@ services:
       - "443:443"
       - "8080:8080"
     command:
-      - "--api.insecure=true"
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -63,9 +64,12 @@ services:
       - "traefik.http.routers.http-catchall.entrypoints=web"
       - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # Add basic authentication to the dashboard.
+      - "traefik.http.routers.traefik.middlewares=basic-auth"
+      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
 
   portainer:
-    # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too. 
+    # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too.
     image: "portainer/portainer-ce:latest"
     container_name: "portainer"
     command: "-H unix:///var/run/docker.sock"
