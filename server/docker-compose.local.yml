@@ -72,7 +72,14 @@ services:
     # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too.
     image: "portainer/portainer-ce:latest"
     container_name: "portainer"
-    command: "-H unix:///var/run/docker.sock"
+    command:
+      [
+        "--admin-password",
+        "${PORTAINER_ENCODED_PASSWORD?Variable not set}",
+        "-H",
+        "unix:///var/run/docker.sock",
+        "--tlsskipverify"
+      ]
     restart: "unless-stopped"
     networks:
       - "public"
