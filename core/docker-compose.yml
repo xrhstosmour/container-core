@@ -1,0 +1,139 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: "3.9"
+
+services:
+  base:
+    container_name: "base"
+    build:
+      context: ..
+      dockerfile: "core/base.dockerfile"
+      args:
+        - "DOCKER_USER_NAME=${DOCKER_USER_NAME?Variable not set}"
+        - "DOCKER_USER_UID=${DOCKER_USER_UID?Variable not set}"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    environment:
+      - "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME?Variable not set}"
+      - "SHARED_FOLDER_NAME=${SHARED_FOLDER_NAME?Variable not set}"
+      - "IS_ON_PREMISE=${IS_ON_PREMISE?Variable not set}"
+      - "IS_PRODUCTIVE=${IS_PRODUCTIVE?Variable not set}"
+      - "DOCKER_USER_NAME=${DOCKER_USER_NAME?Variable not set}"
+      - "DOCKER_USER_UID=${DOCKER_USER_UID?Variable not set}"
+      - "DOCKER_TIMEZONE=${DOCKER_TIMEZONE?Variable not set}"
+    volumes:
+      - "base_certificates:/base/.certificates"
+      - "base_keys:/base/.keys"
+      - "base_data:/base/data"
+
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    expose:
+      - "443"
+    command:
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web_secure.address=:443"
+      - "--certificatesresolvers.le.acme.email=${TRAEFIK_CERTIFICATE_EMAIL?Variable not set}"
+      - "--certificatesresolvers.le.acme.storage=/base/.certificates/acme.json"
+      - "--certificatesResolvers.le.acme.tlsChallenge=true"
+    depends_on:
+      - "base"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "traefik_data:/base/.certificates"
+    labels:
+      # Default traefik configuration.
+      - "traefik.enable=true"
+      - "traefik.docker.network=public"
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_HOST?Variable not set}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # SSL/TLS configuration.
+      - "traefik.http.routers.traefik.entrypoints=web_secure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=${TRAEFIK_CERTIFICATE_RESOLVER?Variable not set}"
+      # Global redirection to https with middleware.
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # Add basic authentication to the dashboard.
+      - "traefik.http.routers.traefik.middlewares=basic-auth"
+      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_ENCODED_PASSWORD?Variable not set}"
+
+  portainer:
+    # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too.
+    image: "portainer/portainer-ce:latest"
+    container_name: "portainer"
+    command:
+      [
+        "--admin-password",
+        "${PORTAINER_ENCODED_PASSWORD?Variable not set}",
+        "-H",
+        "unix:///var/run/docker.sock",
+        "--tlsskipverify"
+      ]
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${PORTAINER_PORT?Variable not set}:9000"
+    depends_on:
+      - "traefik"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOST?Variable not set}`)"
+      - "traefik.http.routers.portainer.service=portainer"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.entrypoints=web_secure"
+      # The container can only be exposed at port 9000 locally.
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
+volumes:
+  base_certificates:
+    name: "base_certificates"
+
+  base_keys:
+    name: "base_keys"
+
+  base_data:
+    name: "base_data"
+
+  traefik_data:
+    name: "traefik_data"
+
+  portainer_data:
+    name: "portainer_data"
+
+networks:
+
+  # ! Public network should be created before composing.
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

@@ -1,0 +1,47 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: "3.9"
+
+services:
+  pgadmin:
+    image: "dpage/pgadmin4:latest"
+    container_name: "pgadmin"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${PGADMIN_PORT?Variable not set}:${PGADMIN_PORT?Variable not set}"
+    # Uncomment this if you are using the provided postgresql database from this project.
+    # depends_on:
+    #   - "postgresql"
+    volumes:
+      - "pgadmin_data:/var/lib/pgadmin"
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL?Variable not set}"
+      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD?Variable not set}"
+      - "PGADMIN_LISTEN_PORT=${PGADMIN_PORT?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_HOST?Variable not set}`)"
+      - "traefik.http.routers.pgadmin.service=pgadmin"
+      - "traefik.http.routers.pgadmin.tls=true"
+      - "traefik.http.routers.pgadmin.entrypoints=web_secure"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=${PGADMIN_PORT?Variable not set}"
+
+volumes:
+  pgadmin_data:
+    name: "pgadmin_data"
+
+networks:
+
+  # ! Public network should be created before composing.
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

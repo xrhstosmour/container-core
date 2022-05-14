@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  homer:
+    image: "b4bz/homer:latest"
+    container_name: "homer"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${HOMER_PORT?Variable not set}:8080"
+    environment:
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+      - "UID=${DOCKER_USER_UID?Variable not set}"
+      - "GID=${DOCKER_USER_UID?Variable not set}"
+    volumes:
+      - "homer_data:/www/assets"
+      - "./configuration/homer/configuration.yml:/www/assets/config.yml"
+      - "./configuration/homer/assets/fonts:/www/assets/fonts"
+      - "./configuration/homer/assets/logos:/www/assets/logos"
+      - "./configuration/homer/assets/wallpapers:/www/assets/wallpapers"
+      - "./configuration/homer/assets/custom.css:/www/assets/custom.css"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homer.rule=Host(`${HOMER_HOST?Variable not set}`)"
+      - "traefik.http.routers.homer.service=homer"
+      - "traefik.http.routers.homer.tls=true"
+      - "traefik.http.routers.homer.entrypoints=web_secure"
+      # The container can only be exposed at port 8080 locally.
+      - "traefik.http.services.homer.loadbalancer.server.port=8080"
+      # - "traefik.http.routers.homer.middlewares=authelia@docker"
+
+volumes:
+  homer_data:
+    name: "homer_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

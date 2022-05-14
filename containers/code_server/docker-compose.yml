@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  code_server:
+    image: "codercom/code-server:latest"
+    container_name: "code_server"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${CODE_SERVER_PORT?Variable not set}:8080"
+    environment:
+      - "PUID=${DOCKER_USER_UID?Variable not set}"
+      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+      - "PASSWORD=${CODE_SERVER_PASSWORD?Variable not set}"
+    volumes:
+      - "./configuration:/config"
+      # - "$HOME/:/home/coder/project"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.code_server.rule=Host(`${CODE_SERVER_HOST?Variable not set}`)"
+      - "traefik.http.routers.code_server.service=code_server"
+      - "traefik.http.routers.code_server.tls=true"
+      - "traefik.http.routers.code_server.entrypoints=web_secure"
+      - "traefik.http.services.code_server.loadbalancer.server.port=8080"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+
+  # TODO: Implement SSL encryption for theRedis connection. Help here: https://stackoverflow.com/questions/60253058/how-to-set-up-a-docker-redis-container-with-ssl.
+  redis:
+    image: "redis:latest"
+    container_name: "redis"
+    # The command save 100 1 is for saving up to 100 data before restarting.
+    command: "redis-server --save 100 1 --loglevel warning --requirepass ${REDIS_PASSWORD?Variable not set} --port ${REDIS_PORT?Variable not set}"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "${REDIS_PORT?Variable not set}:${REDIS_PORT?Variable not set}"
+    volumes:
+      - redis_data:/data
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  redis_data:
+    name: "redis_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

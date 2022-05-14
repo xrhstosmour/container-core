@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  uptime_kuma:
+    image: "louislam/uptime-kuma:latest"
+    container_name: "uptime_kuma"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${UPTIME_KUMA_PORT?Variable not set}:3001"
+    volumes:
+      - "uptime_kuma_data:/app/data"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime_kuma.rule=Host(`${UPTIME_KUMA_HOST?Variable not set}`)"
+      - "traefik.http.routers.uptime_kuma.service=uptime_kuma"
+      - "traefik.http.routers.uptime_kuma.tls=true"
+      - "traefik.http.routers.uptime_kuma.entrypoints=web_secure"
+      - "traefik.http.services.uptime_kuma.loadbalancer.server.port=3001"
+
+volumes:
+  uptime_kuma_data:
+    name: "uptime_kuma_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

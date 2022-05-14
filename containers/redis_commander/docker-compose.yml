@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  redis_commander:
+    image: "rediscommander/redis-commander:latest"
+    container_name: "redis_commander"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${REDIS_COMMANDER_PORT?Variable not set}:${REDIS_COMMANDER_PORT?Variable not set}"
+    depends_on:
+      - "redis"
+    environment:
+      - "REDIS_HOST=redis"
+      - "REDIS_HOSTS=local:redis:${REDIS_PORT?Variable not set}"
+      - "REDIS_PORT=${REDIS_PORT?Variable not set}"
+      - "REDIS_PASSWORD=${REDIS_PASSWORD?Variable not set}"
+      - "HTTP_USER=${REDIS_COMMANDER_USER?Variable not set}"
+      - "HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis_commander.rule=Host(`${REDIS_COMMANDER_HOST?Variable not set}`)"
+      - "traefik.http.routers.redis_commander.service=redis_commander"
+      - "traefik.http.routers.redis_commander.tls=true"
+      - "traefik.http.routers.redis_commander.entrypoints=web_secure"
+      - "traefik.http.services.redis_commander.loadbalancer.server.port=8081"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

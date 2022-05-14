@@ -1,0 +1,35 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: "3.9"
+
+services:
+  postgresql:
+    image: "postgres:latest"
+    container_name: "postgresql"
+    restart: "unless-stopped"
+    user: "${POSTGRESQL_USER?Variable not set}"
+    networks:
+      - "local"
+    ports:
+      - "${POSTGRESQL_PORT?Variable not set}:${POSTGRESQL_PORT?Variable not set}"
+    volumes:
+      - "postgresql_data:/var/lib/postgresql/data"
+      - "./scripts/database:/docker-entrypoint-initdb.d"
+    environment:
+      - "POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD?Variable not set}"
+      - "POSTGRES_USER=${POSTGRESQL_USER?Variable not set}"
+      # POSTGRES_MULTIPLE_DATABASES_INFO should have the following format: database1:user1:password1,database2:user2:password2,...
+      - "POSTGRES_MULTIPLE_DATABASES_INFO=${POSTGRES_MULTIPLE_DATABASES_INFO?Variable not set}"
+      - "POSTGRES_INITDB_ARGS=${POSTGRESQL_INITIALIZE_ARGUMENTS?Variable not set}"
+    command: "-p ${POSTGRESQL_PORT?Variable not set}"
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  postgresql_data:
+    name: "postgresql_data"
+
+networks:
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

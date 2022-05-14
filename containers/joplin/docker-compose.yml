@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+
+  joplin:
+    image: "joplin/server:latest"
+    container_name: "joplin"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "22300:22300"
+    depends_on:
+      - "postgresql"
+    # command: bash -c "./wait_for_it.sh postgresql:${POSTGRESQL_PORT?Variable not set} --strict --timeout=300"
+    environment:
+      - "APP_PORT=22300"
+      - "APP_BASE_URL=https://${JOPLIN_HOST?Variable not set}"
+      - "DB_CLIENT=${JOPLIN_DATABASE_TYPE?Variable not set}"
+      - "POSTGRES_PASSWORD=${JOPLIN_DATABASE_PASSWORD?Variable not set}"
+      - "POSTGRES_DATABASE=${JOPLIN_DATABASE?Variable not set}"
+      - "POSTGRES_USER=${JOPLIN_DATABASE_USER?Variable not set}"
+      - "POSTGRES_PORT=${POSTGRESQL_PORT?Variable not set}"
+      - "POSTGRES_HOST=${POSTGRESQL_SERVER?Variable not set}"
+      - "MAX_TIME_DRIFT=${JOPLIN_MAX_TIME_DRIFT?Variable not set}"
+    # Bind the wait_for_it script, at the joplin's working directory (/home/joplin/packages/server).
+    volumes:
+      - type: "bind"
+        source: "./scripts/services/wait_for_it.sh"
+        target: "/home/joplin/packages/server/wait_for_it.sh"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.joplin.rule=Host(`${JOPLIN_HOST?Variable not set}`)"
+      - "traefik.http.routers.joplin.service=joplin"
+      - "traefik.http.routers.joplin.tls=true"
+      - "traefik.http.routers.joplin.entrypoints=web_secure"
+      # The container can only be exposed at port 22300 both locally, on host and via the proxy.
+      - "traefik.http.services.joplin.loadbalancer.server.port=22300"
+volumes:
+  joplin_data:
+    name: "joplin_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

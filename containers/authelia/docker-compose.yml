@@ -1,0 +1,50 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: "3.9"
+
+services:
+  authelia:
+    image: "authelia/authelia:latest"
+    container_name: "authelia"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+    ports:
+      - "${AUTHELIA_PORT?Variable not set}:${AUTHELIA_PORT?Variable not set}"
+    expose:
+      - "${AUTHELIA_PORT?Variable not set}"
+    healthcheck:
+      disable: true
+    volumes:
+      - "authelia_data:/config"
+    environment:
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.rule=Host(`${AUTHELIA_HOST?Variable not set}`)"
+      - "traefik.http.routers.authelia.service=authelia"
+      - "traefik.http.routers.authelia.tls=true"
+      - "traefik.http.routers.authelia.entrypoints=web_secure"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:${AUTHELIA_PORT?Variable not set}/api/verify?rd=https://${AUTHELIA_HOST?Variable not set}/"
+      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email"
+      - "traefik.http.middlewares.authelia_basic.forwardauth.address=http://authelia:${AUTHELIA_PORT?Variable not set}/api/verify?auth=basic"
+      - "traefik.http.middlewares.authelia_basic.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.authelia_basic.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email"
+
+volumes:
+  authelia_data:
+    name: "authelia_data"
+
+networks:
+
+  # ! Public network should be created before composing.
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

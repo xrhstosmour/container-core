@@ -1,0 +1,13 @@
+# samba:
+    #   image: "dperson/samba:latest"
+    #   container_name: "samba"
+    #   restart: "unless-stopped"
+    #   networks:
+    #     - "public"
+    #     - "local"
+    #   ports:
+    #     - "${CODE_SERVER_PORT?Variable not set}:8080"
+    #   environment:
+    #     - "PUID=${DOCKER_USER_UID?Variable not set}"
+    #     - "PGID=${DOCKER_USER_UID?Variable not set}"
+    #     - "TZ=${DOCKER_TIMEZONE?Variable not set}"

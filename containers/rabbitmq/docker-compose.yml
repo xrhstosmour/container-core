@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+
+  # TODO: Fix RabbitMQ docker compose and find an appropriate GUI too.
+  rabbitmq:
+    image: "rabbitmq:latest"
+    container_name: "rabbitmq"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "5672:5672"
+    volumes:
+      - "rabbitmq_data:/var/lib/rabbitmq"
+      - "./configuration/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  rabbitmq_data:
+    name: "rabbitmq_data"
+
+networks:
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false

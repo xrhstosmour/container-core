@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+
+  # Help: https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples
+  vaultwarden:
+    image: "vaultwarden/server:latest"
+    container_name: "vaultwarden"
+    restart: "unless-stopped"
+    # user: ${DOCKER_USER_UID?Variable not set}:${DOCKER_USER_UID?Variable not set}
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${VAULTWARDEN_PORT?Variable not set}:80"
+      - "${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}:3012"
+    depends_on:
+      - "postgresql"
+    volumes:
+      - "vaultwarden_data:/data"
+    environment:
+      - "ROCKET_PORT=${VAULTWARDEN_PORT?Variable not set}"
+      - "WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED?Variable not set}"
+      - "DATABASE_URL=${VAULTWARDEN_DATABASE_URL?Variable not set}"
+      - "ADMIN_TOKEN=${VAULTWARDEN_ADMINISTRATION_TOKEN?Variable not set}"
+      - "DOMAIN=${VAULTWARDEN_DOMAIN?Variable not set}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`)"
+      - "traefik.http.routers.vaultwarden.service=vaultwarden"
+      - "traefik.http.routers.vaultwarden.tls=true"
+      - "traefik.http.routers.vaultwarden.entrypoints=web_secure"
+      # - "traefik.http.services.vaultwarden.loadbalancer.server.port=${VAULTWARDEN_PORT?Variable not set}"
+      - "traefik.http.routers.vaultwarden-websocket.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`) && Path(`/notifications/hub`)"
+      - "traefik.http.routers.vaultwarden-websocket.service=vaultwarden-websocket"
+      - "traefik.http.services.vaultwarden-websocket.loadbalancer.server.port=${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}"
+
+volumes:
+  vaultwarden_data:
+    name: "vaultwarden_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: "local"
+    external: false
