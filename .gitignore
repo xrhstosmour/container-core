@@ -92,8 +92,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments.
-# This is commented so as to be able to push .env with dummy data to keep the structure we want.
-# .env
+.env
 .venv
 env/
 venv/

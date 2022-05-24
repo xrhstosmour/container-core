@@ -17,9 +17,5 @@ Makefile
 LICENSE
 README.md
 
-# Ignore python generated files.
-**/*.pyc
-**/__pycache__
-
 # Configuration files.
 **/configuration/*
