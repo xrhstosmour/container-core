@@ -1,37 +1,38 @@
 # TODO: Use Secrets to store the passwords to all containers.
-version: "3.9"
+version: '3.9'
 
 services:
   file_browser:
-    image: "filebrowser/filebrowser:latest"
-    container_name: "file_browser"
-    user: ${DOCKER_USER_UID?Variable not set}:${DOCKER_USER_UID?Variable not set}
-    restart: "unless-stopped"
+    image: 'filebrowser/filebrowser:latest'
+    container_name: 'file_browser'
+    user: '${DOCKER_USER_UID?Variable not set}:${DOCKER_USER_UID?Variable not set}'
+    restart: 'unless-stopped'
     networks:
-      - "public"
-      - "local"
+      - 'public'
+      - 'local'
     ports:
-      - "${FILE_BROWSER_PORT?Variable not set}:80"
+      - '${FILE_BROWSER_PORT?Variable not set}:80'
     depends_on:
-      - "base"
+      - 'base'
     volumes:
-      - "base_data:/data"
-      - "./configuration/file_browser/database.db:/database.db"
-      - "./configuration/file_browser/settings.json:/filebrowser.json"
+      - 'data:/data'
+      - './configuration/database.db:/database.db'
+      # - './configuration/file_browser/settings.json:/filebrowser.json'
     security_opt:
-      - "no-new-privileges:true"
+      - 'no-new-privileges:true'
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.file_browser.rule=Host(`${FILE_BROWSER_HOST?Variable not set}`)"
-      - "traefik.http.routers.file_browser.service=file_browser"
-      - "traefik.http.routers.file_browser.tls=true"
-      - "traefik.http.routers.file_browser.entrypoints=web_secure"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.file_browser.rule=Host(`${FILE_BROWSER_HOST?Variable not set}`)'
+      - 'traefik.http.routers.file_browser.service=file_browser'
+      - 'traefik.http.routers.file_browser.tls=true'
+      - 'traefik.http.routers.file_browser.entrypoints=web_secure'
       # The container can only be exposed at port 80 locally.
-      - "traefik.http.services.file_browser.loadbalancer.server.port=80"
+      - 'traefik.http.services.file_browser.loadbalancer.server.port=80'
 
 volumes:
-  base_data:
-    name: "base_data"
+  data:
+    name: 'data'
+    external: true
 
 networks:
 
@@ -39,9 +40,9 @@ networks:
   public:
     # Set as name the public network, you wish your stack to communicate with.
     # External means it would be accesible from outside the stack too.
-    name: "public"
+    name: 'public'
     external: true
   local:
     # Set as name the local network, you wish your stack to communicate with.
-    name: "local"
-    external: false
+    name: 'local'
+    external: true

@@ -1,0 +1,42 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: '3.9'
+
+services:
+
+  vikunja_api:
+    image: 'syncthing/syncthing:latest'
+    container_name: 'syncthing'
+    restart: 'unless-stopped'
+    networks:
+      - 'public'
+      - 'local'
+    ports:
+      - '${VIKUNJA_API_PORT?Variable not set}:${VIKUNJA_API_PORT?Variable not set}'
+    environment:
+      - 'TZ=${VIKUNJA_DATABASE_TYPE?Variable not set}'
+      - 'PUID=${DOCKER_USER_UID?Variable not set}'
+      - 'PGID=${DOCKER_USER_UID?Variable not set}'
+    volumes:
+      - 'vikunja_api_data:/app/vikunja/files'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.vikunja_api.rule=Host(`${VIKUNJA_API_HOST?Variable not set}`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)'
+      - 'traefik.http.routers.vikunja_api.service=vikunja_api'
+      - 'traefik.http.routers.vikunja_api.tls=true'
+      - 'traefik.http.routers.vikunja_api.entrypoints=web_secure'
+      - 'traefik.http.services.vikunja_api.loadbalancer.server.port=${VIKUNJA_API_PORT?Variable not set}'
+
+volumes:
+  vikunja_api_data:
+    name: 'vikunja_api_data'
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: 'public'
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: 'local'
+    external: false
