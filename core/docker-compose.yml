@@ -23,9 +23,11 @@ services:
       - "DOCKER_USER_UID=${DOCKER_USER_UID?Variable not set}"
       - "DOCKER_TIMEZONE=${DOCKER_TIMEZONE?Variable not set}"
     volumes:
-      - "base_certificates:/base/.certificates"
-      - "base_keys:/base/.keys"
-      - "base_data:/base/data"
+      - "data:/base/data"
+      - "keys:/base/data/.keys"
+      - "certificates:/base/data/.certificates"
+      - "shared_data:/base/data/shared_data"
+      - "archived_data:/base/data/archived_data"
 
   traefik:
     image: "traefik:latest"
@@ -41,20 +43,28 @@ services:
     expose:
       - "443"
     command:
-      - "--api.insecure=false"
+      # Configure logging.
+      - "--log.level=ERROR"
+      - "--accesslog=true"
+      # Configure the API.
       - "--api.dashboard=true"
+      - "--api.insecure=false"
+      # Define docker provider.
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      # Define entrypoints.
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web_secure.address=:443"
+      # Configure TLS/SSL.
+      - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.le.acme.email=${TRAEFIK_CERTIFICATE_EMAIL?Variable not set}"
-      - "--certificatesresolvers.le.acme.storage=/base/.certificates/acme.json"
+      - "--certificatesresolvers.le.acme.storage=/certificates/acme.json"
       - "--certificatesResolvers.le.acme.tlsChallenge=true"
     depends_on:
       - "base"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "traefik_data:/base/.certificates"
+      - "traefik_data:/certificates"
     labels:
       # Default traefik configuration.
       - "traefik.enable=true"
@@ -105,18 +115,25 @@ services:
       - "traefik.http.routers.portainer.service=portainer"
       - "traefik.http.routers.portainer.tls=true"
       - "traefik.http.routers.portainer.entrypoints=web_secure"
+      - "traefik.http.routers.portainer.tls.certresolver=${TRAEFIK_CERTIFICATE_RESOLVER?Variable not set}"
       # The container can only be exposed at port 9000 locally.
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 volumes:
-  base_certificates:
-    name: "base_certificates"
+  data:
+    name: "data"
 
-  base_keys:
-    name: "base_keys"
+  certificates:
+    name: "certificates"
 
-  base_data:
-    name: "base_data"
+  keys:
+    name: "keys"
+
+  shared_data:
+    name: "shared_data"
+
+  archived_data:
+    name: "archived_data"
 
   traefik_data:
     name: "traefik_data"
