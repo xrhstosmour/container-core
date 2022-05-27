@@ -1,0 +1,44 @@
+# TODO: Use Secrets to store the passwords to all containers.
+version: "3.9"
+
+services:
+  duplicati:
+    image: "lscr.io/linuxserver/duplicati:latest"
+    container_name: "duplicati"
+    restart: "unless-stopped"
+    networks:
+      - "public"
+      - "local"
+    ports:
+      - "${DUPLICATI_PORT?Variable not set}:8200"
+    environment:
+      - "PUID=${DOCKER_USER_UID?Variable not set}"
+      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+      # - CLI_ARGS= #optional
+      # volumes:
+      # - </path/to/appdata/config>:/config
+      # - </path/to/backups>:/backups
+      # - </path/to/source>:/source
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`${DUPLICATI_HOST?Variable not set}`)"
+      - "traefik.http.routers.duplicati.service=duplicati"
+      - "traefik.http.routers.duplicati.tls=true"
+      - "traefik.http.routers.duplicati.entrypoints=web_secure"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+
+networks:
+
+  # ! Public network should be created before composing.
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # External means it would be accesible from outside the stack too.
+    name: 'public'
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    name: 'local'
+    external: true
