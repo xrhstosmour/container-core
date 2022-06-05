@@ -1,0 +1,21 @@
+# Git files.
+**/.git
+**/.gitignore
+**/.gitattributes
+
+# VisualStudioCode files.
+.vscode
+
+# Docker files.
+**/docker-compose*
+**/[Dd]ockerfile*
+**/.dockerignore
+.env
+
+# Project files.
+Makefile
+LICENSE
+README.md
+
+# Configuration files.
+**/configuration/*
