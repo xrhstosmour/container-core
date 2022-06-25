@@ -26,6 +26,8 @@ services:
       - "traefik.http.routers.redis_commander.tls=true"
       - "traefik.http.routers.redis_commander.entrypoints=web_secure"
       - "traefik.http.services.redis_commander.loadbalancer.server.port=8081"
+      # Add security headers middleware.
+      - "traefik.http.routers.redis_commander.middlewares=security_headers"
 
 networks:
   public:

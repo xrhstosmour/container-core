@@ -30,7 +30,8 @@ services:
       - "traefik.http.routers.homer.entrypoints=web_secure"
       # The container can only be exposed at port 8080 locally.
       - "traefik.http.services.homer.loadbalancer.server.port=8080"
-      # - "traefik.http.routers.homer.middlewares=authelia@docker"
+      # Add security headers middleware.
+      - "traefik.http.routers.homer.middlewares=security_headers"
 
 volumes:
   homer_data:

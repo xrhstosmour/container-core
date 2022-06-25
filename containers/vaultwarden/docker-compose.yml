@@ -31,9 +31,12 @@ services:
       - "traefik.http.routers.vaultwarden.tls=true"
       - "traefik.http.routers.vaultwarden.entrypoints=web_secure"
       # - "traefik.http.services.vaultwarden.loadbalancer.server.port=${VAULTWARDEN_PORT?Variable not set}"
-      - "traefik.http.routers.vaultwarden-websocket.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`) && Path(`/notifications/hub`)"
-      - "traefik.http.routers.vaultwarden-websocket.service=vaultwarden-websocket"
-      - "traefik.http.services.vaultwarden-websocket.loadbalancer.server.port=${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}"
+      - "traefik.http.routers.vaultwarden_websocket.rule=Host(`${VAULTWARDEN_HOST?Variable not set}`) && Path(`/notifications/hub`)"
+      - "traefik.http.routers.vaultwarden_websocket.service=vaultwarden_websocket"
+      - "traefik.http.services.vaultwarden_websocket.loadbalancer.server.port=${VAULTWARDEN_WEB_SOCKET_PORT?Variable not set}"
+      # Add security headers middleware.
+      - "traefik.http.routers.vaultwarden.middlewares=security_headers"
+      - "traefik.http.routers.vaultwarden_websocket.middlewares=security_headers"
 
 volumes:
   vaultwarden_data:

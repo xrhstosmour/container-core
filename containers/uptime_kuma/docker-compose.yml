@@ -21,6 +21,8 @@ services:
       - "traefik.http.routers.uptime_kuma.tls=true"
       - "traefik.http.routers.uptime_kuma.entrypoints=web_secure"
       - "traefik.http.services.uptime_kuma.loadbalancer.server.port=3001"
+      # Add security headers middleware.
+      - "traefik.http.routers.uptime_kuma.middlewares=security_headers"
 
 volumes:
   uptime_kuma_data:

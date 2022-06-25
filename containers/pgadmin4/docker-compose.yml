@@ -27,6 +27,8 @@ services:
       - "traefik.http.routers.pgadmin.tls=true"
       - "traefik.http.routers.pgadmin.entrypoints=web_secure"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=${PGADMIN_PORT?Variable not set}"
+      # Add security headers middleware.
+      - "traefik.http.routers.pgadmin.middlewares=security_headers"
 
 volumes:
   pgadmin_data:

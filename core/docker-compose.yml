@@ -55,11 +55,23 @@ services:
       # Define entrypoints.
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web_secure.address=:443"
+      # Add forwarded headers.
+      - "--entryPoints.web.forwardedHeaders.insecure"
+      - "--entryPoints.websecure.forwardedHeaders.insecure"
       # Configure TLS/SSL.
       - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.le.acme.email=${TRAEFIK_CERTIFICATE_EMAIL?Variable not set}"
       - "--certificatesresolvers.le.acme.storage=/certificates/acme.json"
       - "--certificatesResolvers.le.acme.tlsChallenge=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--serverstransport.insecureskipverify=true"
+      # Configuration file for more settings for TLS ciphers according to: https://www.ssllabs.com/ssltest/.
+      - "--providers.file.filename=./configuration/traefik.toml"
+      - "--providers.file.watch=true"
+      # Add a custom unique ID on every request.
+      - "--tracing.jaeger=true"
+      - "--tracing.jaeger.samplingParam=0"
+      - "--tracing.jaeger.traceContextHeaderName=X-Request-ID"
     depends_on:
       - "base"
     volumes:
@@ -75,14 +87,33 @@ services:
       - "traefik.http.routers.traefik.entrypoints=web_secure"
       - "traefik.http.routers.traefik.tls=true"
       - "traefik.http.routers.traefik.tls.certresolver=${TRAEFIK_CERTIFICATE_RESOLVER?Variable not set}"
-      # Global redirection to https with middleware.
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # Add basic authentication to the dashboard.
-      - "traefik.http.routers.traefik.middlewares=basic-auth"
-      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_ENCODED_PASSWORD?Variable not set}"
+      # Middleware for global redirection to https with middleware.
+      - "traefik.http.routers.http_catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http_catchall.entrypoints=web"
+      - "traefik.http.routers.http_catchall.middlewares=redirect_to_https"
+      # Set priority for global redirection, in case some local containers does not work with non valid/trusted certificates.
+      - "traefik.http.routers.http_catchall.priority=1"
+      - "traefik.http.middlewares.redirect_to_https.redirectscheme.scheme=https"
+      # Middleware to automatically set security headers according to: https://securityheaders.com/.
+      - "traefik.http.middlewares.security_headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security_headers.headers.customFrameOptionsValue=sameorigin"
+      - "traefik.http.middlewares.security_headers.headers.referrerPolicy=same-origin"
+      - "traefik.http.middlewares.security_headers.headers.BrowserXssFilter=true"
+      - "traefik.http.middlewares.security_headers.headers.ContentTypeNosniff=true"
+      - "traefik.http.middlewares.security_headers.headers.ForceSTSHeader=true"
+      - "traefik.http.middlewares.security_headers.headers.SSLRedirect=true"
+      - "traefik.http.middlewares.security_headers.headers.STSIncludeSubdomains=true"
+      - "traefik.http.middlewares.security_headers.headers.STSPreload=true"
+      - "traefik.http.middlewares.security_headers.headers.STSSeconds=315360000"
+      # Middleware to redirect to www.
+      - "traefik.http.middlewares.redirect_to_www.redirectregex.regex=(https|http)://(?:www.)?(.*)"
+      - "traefik.http.middlewares.redirect_to_www.redirectregex.replacement=https://www.$${2}"
+      # Middleware to redirect to non-www.
+      - "traefik.http.middlewares.redirect_to_non_www.redirectregex.regex=(https|http)://(www\\.(.*))"
+      - "traefik.http.middlewares.redirect_to_non_www.redirectregex.replacement=https://$${3}"
+      # Middleware for basic authentication to the dashboard.
+      - "traefik.http.routers.traefik.middlewares=basic_auth"
+      - "traefik.http.middlewares.basic_auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_ENCODED_PASSWORD?Variable not set}"
 
   portainer:
     # Portainer CE is the latest version for now, if you need swarm support, you must install the portainer agent too.
@@ -118,6 +149,8 @@ services:
       - "traefik.http.routers.portainer.tls.certresolver=${TRAEFIK_CERTIFICATE_RESOLVER?Variable not set}"
       # The container can only be exposed at port 9000 locally.
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      # Add security headers middleware.
+      - "traefik.http.routers.portainer.middlewares=security_headers"
 
 volumes:
   data:
