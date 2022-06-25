@@ -66,7 +66,8 @@ services:
       - "--global.sendAnonymousUsage=false"
       - "--serverstransport.insecureskipverify=true"
       # Configuration file for more settings for TLS ciphers according to: https://www.ssllabs.com/ssltest/.
-      - "--providers.file.filename=./configuration/traefik.toml"
+      # TODO: Fix open configuration/traefik.toml: no such file or directory.
+      - "--providers.file.filename=configuration/traefik.toml"
       - "--providers.file.watch=true"
       # Add a custom unique ID on every request.
       - "--tracing.jaeger=true"
@@ -91,9 +92,9 @@ services:
       - "traefik.http.routers.traefik.middlewares=basic_auth"
       - "traefik.http.middlewares.basic_auth.basicauth.users=${TRAEFIK_USER?Variable not set}:${TRAEFIK_ENCODED_PASSWORD?Variable not set}"
       # Middleware for global redirection to https with middleware.
-      - "traefik.http.routers.http_catchall.rule=hostregexp(`{host:.+}`)"
-      - "traefik.http.routers.http_catchall.entrypoints=web"
-      - "traefik.http.routers.http_catchall.middlewares=redirect_to_https"
+      - "traefik.http.routers.http_catch_all.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http_catch_all.entrypoints=web"
+      - "traefik.http.routers.http_catch_all.middlewares=redirect_to_https"
       - "traefik.http.middlewares.redirect_to_https.redirectscheme.scheme=https"
       # Middleware to automatically set security headers according to: https://securityheaders.com/.
       - "traefik.http.middlewares.security_headers.headers.framedeny=true"
