@@ -2,22 +2,23 @@ version: "3.9"
 
 services:
   code_server:
-    image: "codercom/code-server:latest"
+    image: "lscr.io/linuxserver/code-server:latest"
     container_name: "code_server"
     restart: "unless-stopped"
     networks:
-      - "public"
       - "local"
     ports:
-      - "${CODE_SERVER_PORT?Variable not set}:8080"
+      - "${CODE_SERVER_PORT?Variable not set}:8443"
     environment:
-      - "PUID=${DOCKER_USER_UID?Variable not set}"
-      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      # You can either the PUID and the PGID of the host machine user with root permissions or to the docker non root one.
+      - "PUID=${HOST_USER_PUID?Variable not set}"
+      - "PGID=${HOST_USER_GUID?Variable not set}"
       - "TZ=${DOCKER_TIMEZONE?Variable not set}"
-      - "PASSWORD=${CODE_SERVER_PASSWORD?Variable not set}"
+      - "HASHED_PASSWORD=${CODE_SERVER_HASHED_PASSWORD?Variable not set}"
+      - "SUDO_PASSWORD_HASH=${CODE_SERVER_HASHED_ROOT_PASSWORD?Variable not set}"
+      - "PROXY_DOMAIN=${CODE_SERVER_HOST?Variable not set}"
     volumes:
-      - "./configuration:/config"
-      # - "$HOME/:/home/coder/project"
+      - "code_server_data:/config"
     security_opt:
       - "no-new-privileges:true"
     labels:
@@ -26,15 +27,22 @@ services:
       - "traefik.http.routers.code_server.service=code_server"
       - "traefik.http.routers.code_server.tls=true"
       - "traefik.http.routers.code_server.entrypoints=web_secure"
-      - "traefik.http.services.code_server.loadbalancer.server.port=8080"
+      - "traefik.http.services.code_server.loadbalancer.server.port=8443"
+      # If the image is being served locally, because of non trusted self signed certificate we should access it only as http, for everything to work.
+      # That is because VSCode uses webview and service workers, which work only with valid/trusted certificates.
+      # Update to have priority greater than CODE_SERVER_HOST length, so as to be able to use the http version, without redirecting to the https.
+      - "traefik.http.routers.http_code_server.rule=Host(`${CODE_SERVER_HOST?Variable not set}`)"
+      - "traefik.http.routers.http_code_server.priority=${HTTP_CODE_SERVER_PRIORITY:-0}"
+      - "traefik.http.routers.http_code_server.entrypoints=web"
+      # Add security headers middleware only for the web secure route.
+      - "traefik.http.routers.code_server.middlewares=security_headers"
+
+volumes:
+  code_server_data:
+    name: "code_server_data"
 
 networks:
-  public:
-    # Set as name the public network, you wish your stack to communicate with.
-    # External means it would be accesible from outside the stack too.
-    name: "public"
-    external: true
   local:
-    # Set as name the local network, you wish your stack to communicate with.
+    # Set as name the local network, you wish your stack to communicate with. Set it as external because the network is already created at core stack.
     name: "local"
-    external: false
+    external: true
