@@ -15,7 +15,7 @@ services:
       - "PGID=${HOST_USER_GUID?Variable not set}"
       - "TZ=${DOCKER_TIMEZONE?Variable not set}"
       - "HASHED_PASSWORD=${CODE_SERVER_HASHED_PASSWORD?Variable not set}"
-      - "SUDO_PASSWORD_HASH=${CODE_SERVER_HASHED_ROOT_PASSWORD?Variable not set}"
+      - "SUDO_PASSWORD_HASH=${HOST_HASHED_ROOT_PASSWORD?Variable not set}"
       - "PROXY_DOMAIN=${CODE_SERVER_HOST?Variable not set}"
     volumes:
       - "code_server_data:/config"
