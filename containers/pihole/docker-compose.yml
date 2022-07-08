@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  pi_hole:
+    image: "pihole/pihole:latest"
+    container_name: "pi_hole"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+      - "public"
+    ports:
+      - "${PI_HOLE_PORT?Variable not set}:80/tcp"
+      - "53:53/tcp"
+      - "53:53/udp"
+      # Only required if you are using Pi-hole as your DHCP server.
+      - "67:67/udp"
+    cap_add:
+      - "NET_ADMIN"
+    environment:
+      - "WEBPASSWORD=${PI_HOLE_PASSWORD?Variable not set}"
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+      - "VIRTUAL_HOST=${PI_HOLE_HOST?Variable not set}"
+      - "ADMIN_EMAIL=${PI_HOLE_EMAIL?Variable not set}"
+      - "VIRTUAL_PORT=80"
+      - "WEBTHEME=dark"
+    volumes:
+      - "pi_hole_data:/etc/pi_hole"
+      - "pi_hole_dnsmasq_data:/etc/dnsmasq.d"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pi_hole.rule=Host(`${PI_HOLE_HOST?Variable not set}`)"
+      - "traefik.http.routers.pi_hole.service=pi_hole"
+      - "traefik.http.routers.pi_hole.tls=true"
+      - "traefik.http.routers.pi_hole.entrypoints=web_secure"
+      - "traefik.http.services.pi_hole.loadbalancer.server.port=80"
+      # Add security headers middleware.
+      - "traefik.http.routers.pi_hole.middlewares=security_headers"
+
+volumes:
+  pi_hole_data:
+    name: "pi_hole_data"
+  pi_hole_dnsmasq_data:
+    name: "pi_hole_dnsmasq_data"
+
+networks:
+  public:
+    # Set as name the public network, you wish your stack to communicate with.
+    # Set it as external because the network is already created at host machine.
+    name: "public"
+    external: true
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    # Set it as external because the network is already created at core stack.
+    name: "local"
+    external: true
