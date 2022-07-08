@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  remmina:
+    image: "linuxserver/remmina:latest"
+    container_name: "remmina"
+    restart: "unless-stopped"
+    networks:
+      - "local"
+    ports:
+      - "${REMINNA_PORT?Variable not set}:3000"
+    environment:
+      # You can either the PUID and the PGID of the host machine user with root permissions or to the docker non root one.
+      - "PUID=${DOCKER_USER_UID?Variable not set}"
+      - "PGID=${DOCKER_USER_UID?Variable not set}"
+      - "TZ=${DOCKER_TIMEZONE?Variable not set}"
+    volumes:
+      - "remmina_data:/config"
+    security_opt:
+      - "no-new-privileges:true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.remmina.rule=Host(`${REMINNA_HOST?Variable not set}`)"
+      - "traefik.http.routers.remmina.service=remmina"
+      - "traefik.http.routers.remmina.tls=true"
+      - "traefik.http.routers.remmina.entrypoints=web_secure"
+      - "traefik.http.services.remmina.loadbalancer.server.port=3000"
+      # Add security headers middleware.
+      - "traefik.http.routers.remmina.middlewares=security_headers"
+
+volumes:
+  remmina_data:
+    name: "remmina_data"
+
+networks:
+  local:
+    # Set as name the local network, you wish your stack to communicate with.
+    # Set it as external because the network is already created at core stack.
+    name: "local"
+    external: true
